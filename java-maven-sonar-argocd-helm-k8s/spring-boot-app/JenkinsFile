@@ -23,6 +23,7 @@ pipeline {
 
     stage('Static Code Analysis') {
       environment {
+        // Use host/public IP instead of docker0
         SONAR_URL = "http://10.0.2.15:9000"
       }
       steps {
@@ -56,24 +57,22 @@ pipeline {
     }
 
     stage('Update Deployment File') {
-        agent { label 'master' } // run on host, not inside docker
         environment {
             GIT_REPO_NAME = "Jenkins-Zero-To-Hero"
             GIT_USER_NAME = "shyam9307"
         }
         steps {
             withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-                dir("${WORKSPACE}") { // ensure we are in the workspace
-                    sh '''
-                        git config user.email "shyam.xyz@gmail.com"
-                        git config user.name "Shyam Patil"
-                        BUILD_NUMBER=${BUILD_NUMBER}
-                        sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                        git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                        git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit"
-                        git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
-                    '''
-                }
+                sh '''
+                    cd ${WORKSPACE}
+                    git config user.email "shyam.xyz@gmail.com"
+                    git config user.name "Shyam Patil"
+                    BUILD_NUMBER=${BUILD_NUMBER}
+                    sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                    git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                    git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit"
+                    git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                '''
             }
         }
     }
