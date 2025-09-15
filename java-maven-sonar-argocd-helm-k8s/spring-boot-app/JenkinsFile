@@ -1,7 +1,7 @@
 pipeline {
   agent {
     docker {
-      image 'shyampatil9284/maven-docker:latest'
+      image 'shyampatil9284/maven-docker:with-git'
       args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
     }
   }
@@ -54,7 +54,6 @@ pipeline {
     }
 
     stage('Update Deployment File') {
-      agent { label '' } // run on Jenkins master
       steps {
         cleanWs() // ✅ clear workspace to avoid @2 conflicts
         checkout([
