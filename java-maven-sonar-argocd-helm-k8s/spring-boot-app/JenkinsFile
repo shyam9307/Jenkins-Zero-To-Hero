@@ -1,13 +1,13 @@
 pipeline {
   agent {
     docker {
-      image 'shyampatil9284/maven-docker:with-git'
+      image 'shyampatil9284/maven-docker:with-git'   // ✅ custom image with Git, Maven, Java, Docker CLI
       args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
     }
   }
 
   environment {
-    SONAR_URL = "http://10.0.2.15:9000"
+    SONAR_URL   = "http://10.0.2.15:9000"
     DOCKER_IMAGE = "shyampatil9284/ultimate-cicd:${BUILD_NUMBER}"
   }
 
@@ -54,25 +54,28 @@ pipeline {
     }
 
     stage('Update Deployment File') {
+      agent { label '' }  // run on Jenkins master (not containerized agent)
       steps {
-        cleanWs() // ✅ clear workspace to avoid @2 conflicts
+        cleanWs()  // ✅ clear workspace to avoid @2 conflicts
         checkout([
           $class: 'GitSCM',
           branches: [[name: '*/main']],
           userRemoteConfigs: [[url: 'https://github.com/shyam9307/Jenkins-Zero-To-Hero']]
         ])
         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-          sh '''
-            git config user.email "shyam.xyz@gmail.com"
-            git config user.name "Shyam Patil"
+          dir('.') {   // ✅ ensure commands run inside the repo
+            sh '''
+              git config user.email "shyam.xyz@gmail.com"
+              git config user.name "Shyam Patil"
 
-            sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" \
-              java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+              sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" \
+                java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
-            git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-            git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit"
-            git push https://${GITHUB_TOKEN}@github.com/shyam9307/Jenkins-Zero-To-Hero HEAD:main
-          '''
+              git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+              git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit"
+              git push https://${GITHUB_TOKEN}@github.com/shyam9307/Jenkins-Zero-To-Hero HEAD:main
+            '''
+          }
         }
       }
     }
