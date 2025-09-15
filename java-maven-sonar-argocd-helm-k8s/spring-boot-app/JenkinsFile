@@ -14,7 +14,6 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
-        // Clone the repository so Git commands will work later
         git branch: 'main', url: 'https://github.com/shyam9307/Jenkins-Zero-To-Hero.git'
       }
     }
@@ -55,20 +54,19 @@ pipeline {
     }
 
     stage('Update Deployment File') {
+      agent { label '' } // run on Jenkins master node
       steps {
-        // Run on Jenkins master (default node), not in Docker
+        checkout scm  // ensures workspace has .git
         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-          dir("${WORKSPACE}") { 
-            sh '''
-              git config user.email "shyam.xyz@gmail.com"
-              git config user.name "Shyam Patil"
-              BUILD_NUMBER=${BUILD_NUMBER}
-              sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-              git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-              git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit"
-              git push https://${GITHUB_TOKEN}@github.com/shyam9307/Jenkins-Zero-To-Hero HEAD:main
-            '''
-          }
+          sh '''
+            git config user.email "shyam.xyz@gmail.com"
+            git config user.name "Shyam Patil"
+            BUILD_NUMBER=${BUILD_NUMBER}
+            sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+            git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+            git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit"
+            git push https://${GITHUB_TOKEN}@github.com/shyam9307/Jenkins-Zero-To-Hero HEAD:main
+          '''
         }
       }
     }
